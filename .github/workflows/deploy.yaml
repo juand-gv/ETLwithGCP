@@ -1,0 +1,25 @@
+name: Deploy to GCP
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@master
+
+    - name: Build and Push Docker images
+      run: |
+        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/api:latest ./api
+        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/api:latest
+
+    - name: Deploy to GCP
+      run: |
+        gcloud run deploy api --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/api:latest --platform managed
