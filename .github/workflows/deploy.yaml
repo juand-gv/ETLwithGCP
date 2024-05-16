@@ -1,25 +1,31 @@
-name: Deploy to GCP
+name: Deploy Cloud Function
 
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Set up Cloud SDK
+    - name: Set up Google Cloud SDK
       uses: google-github-actions/setup-gcloud@master
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_SA_KEY }}
+        export_default_credentials: true
 
-    - name: Build and Push Docker images
+    - name: Deploy Cloud Function
       run: |
-        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/api:latest ./api
-        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/api:latest
-
-    - name: Deploy to GCP
-      run: |
-        gcloud run deploy api --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/api:latest --platform managed
+        gcloud functions deploy gc_csv_2_bq \
+          --entry-point csv_to_bigquery \
+          --runtime python39 \
+          --trigger-http \
+          --allow-unauthenticated \
+          --region us-central1 \
+          --source ./load_data \
+          --set-env-vars=GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}

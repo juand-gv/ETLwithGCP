@@ -4,9 +4,11 @@ from google.cloud import secretmanager
 
 import os
 
-__project_id__ = os.getenv('GCP_PROJECT_ID')
+# Retrieve the Google Cloud project ID from environment variables
+__project_id__ = os.getenv("GCP_PROJECT_ID")
 
 
+# Define schemas for each table to be loaded into BigQuery
 __schemas__ = {
     "hired_employees": [
         bigquery.SchemaField("id", "INTEGER"),
@@ -22,32 +24,52 @@ __schemas__ = {
     "jobs": [
         bigquery.SchemaField("id", "INTEGER"),
         bigquery.SchemaField("job", "STRING"),
-    ]
+    ],
 }
 
+
 def get_secret(secret_id):
-    """Recupera un secreto del Secret Manager."""
+    """
+    Retrieve a secret from Google Cloud Secret Manager.
+
+    Args:
+        secret_id (str): Identifier for the secret to retrieve.
+
+    Returns:
+        str: The secret value.
+    """
+
     client = secretmanager.SecretManagerServiceClient()
     name = f"projects/{__project_id__}/secrets/{secret_id}/versions/latest"
     response = client.access_secret_version(name=name)
-    return response.payload.data.decode('UTF-8')
+    return response.payload.data.decode("UTF-8")
 
 
 def csv_to_bigquery(event, context):
+    """
+    Cloud Function to load CSV files from Google Cloud Storage into BigQuery.
+
+    Args:
+        event (dict): The event payload.
+        context (google.cloud.functions.Context): Metadata for the event.
+    """
+
     client = bigquery.Client()
     gcs_client = storage.Client()
 
-    # Obtener secretos de Google Secret Manager
-    file_path = get_secret('source-file-path')
-    dataset_id = get_secret('mig-dataset-id')
+    # Retrieve configurations from Google Cloud Secret Manager
+    file_path = get_secret("source-file-path")
+    dataset_id = get_secret("mig-dataset-id")
     project_id = __project_id__
 
     table_id = event["table_id"]
 
-    source_blob_name = event['name'] 
+    # Determine the table based on the file name in the event
+    source_blob_name = event["name"]
     uri = f"{file_path}{source_blob_name}"
 
 
+    # Select schema based on the source file name
     if "hired_employees" in source_blob_name:
         table_id = "hired_employees"
         schema = __schemas__["hired_employees"]
@@ -63,19 +85,18 @@ def csv_to_bigquery(event, context):
     dataset_ref = client.dataset(dataset_id, project=project_id)
     table_ref = dataset_ref.table(table_id)
 
+    # Configure the BigQuery load job
     job_config = bigquery.LoadJobConfig()
     job_config.source_format = bigquery.SourceFormat.CSV
     job_config.field_delimiter = ";"
     job_config.write_disposition = "WRITE_TRUNCATE"
-    job_config.skip_leading_rows = 0  # Ajusta según tu CSV
+    job_config.skip_leading_rows = 0
     job_config.autodetect = False
 
-    load_job = client.load_table_from_uri(
-        uri,
-        table_ref,
-        job_config=job_config
-    )
+    load_job = client.load_table_from_uri(uri, table_ref, job_config=job_config)
 
-    load_job.result()  # Espera a que la carga se complete.
+        
+    # Wait for the job to complete
+    load_job.result() 
 
     print(f"Job finished. Loaded {load_job.output_rows} rows.")
