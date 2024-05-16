@@ -27,16 +27,30 @@ docker compose up
 ```
 
 
-## Example to run the Spark job
+## Creating the BigQuery tables
+```SQL
+CREATE TABLE IF NOT EXISTS ODS_ORG_MIGRATION.hired_employees (
+  id              INT64,
+  name            STRING,
+  datetime        STRING,
+  department_id   INT64,
+  job_id          INT64
+)
+OPTIONS(labels=[('process', 'migration')]);
 
-```bash
-spark-submit --jars $(echo /opt/spark/extra_jars/*.jar | tr ' ' ',') \
-    --conf spark.hadoop.fs.gs.impl=com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem \
-    --conf spark.hadoop.fs.AbstractFileSystem.gs.impl=com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS \
-    --conf spark.hadoop.fs.gs.project.id=data-intelligence-prepro \
-    --conf spark.hadoop.google.cloud.auth.service.account.enable=true \
-    --conf spark.hadoop.google.cloud.auth.service.account.json.keyfile=/opt/gcloud-service-key.json \
-    --conf spark.executor.memory=4g \
-    --conf spark.driver.memory=4g \
-    dataproc/jobs/batch_processor.py
-```
+
+CREATE TABLE IF NOT EXISTS ODS_ORG_MIGRATION.departments (
+  id              INT64,
+  department      STRING
+)
+OPTIONS(labels=[('process', 'migration')]);
+
+
+CREATE TABLE IF NOT EXISTS ODS_ORG_MIGRATION.jobs (
+  id              INT64,
+  job            STRING
+)
+OPTIONS(labels=[('process', 'migration')]);
+``` 
+
+
