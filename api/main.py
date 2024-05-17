@@ -100,6 +100,7 @@ def process_records(data: List[Dict], model: BaseModel, dataset_id: str, table_n
         error_response = client.insert_rows_json(table_id, valid_records)
         if error_response:
             logging.error(f"Failed to insert records into {table_id}: {error_response}")
+            errors.extend([str(err) for err in error_response])
     
     # Retrning errors for further processing
     return errors
