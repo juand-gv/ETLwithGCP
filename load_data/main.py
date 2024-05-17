@@ -118,6 +118,6 @@ def csv_to_bigquery(request, context=None):
     # Wait for the job to complete
     load_job.result() 
 
-    response = f"Job finished. Loaded {load_job.output_rows} rows."
+    response = f"Job finished. Loaded {load_job.output_rows} rows into table: {table_id}. In truncate mode."
 
     return response
