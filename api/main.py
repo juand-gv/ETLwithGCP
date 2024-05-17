@@ -85,13 +85,24 @@ def process_records(data: List[Dict], model: BaseModel, dataset_id: str, table_n
     """
     client = bigquery.Client()
     table_id = f"{dataset_id}.{table_name}"
+    valid_records = []
     errors = []
 
-    records = [model(**record).dict() for record in data]
-    errors = client.insert_rows_json(table_id, records)
+    for record in data:
+        try:
+            validated_record = model(**record)
+            valid_records.append(validated_record.dict())
+        except ValidationError as e:
+            errors.append(f"Validation failed for record {record}: {str(e)}")
+            logging.error(f"Validation failed for record {record}: {str(e)}")
 
-    if errors:
-        raise RuntimeError(f"Failed to insert records into {table_id}: {errors}")
+    if valid_records:
+        error_response = client.insert_rows_json(table_id, valid_records)
+        if error_response:
+            logging.error(f"Failed to insert records into {table_id}: {error_response}")
+    
+    # Retrning errors for further processing
+    return errors
 
 def insert_data(request):
     """
@@ -114,21 +125,21 @@ def insert_data(request):
         return {'error': 'Invalid or missing JSON'}
 
     dataset_id = get_secret("mig-dataset-id")
+    total_errors  = []
 
-    try:
-        if 'departments' in request_data:
-            process_records(request_data['departments'], Department, dataset_id, 'departments')
 
-        if 'jobs' in request_data:
-            process_records(request_data['jobs'], Job, dataset_id, 'jobs')
 
-        if 'employees' in request_data:
-            process_records(request_data['employees'], Employee, dataset_id, 'employees')
+    for entity, model in [('departments', Department), ('jobs', Job), ('employees', Employee)]:
+        if entity in request_data:
+            errors = process_records(request_data[entity], model, dataset_id, entity)
+            if errors:
+                total_errors.extend(errors)
 
+
+    if total_errors:
+        # Return error response if there are any validation or insertion errors
+        return {'error': 'Some records failed validation or insertion', 'details': total_errors}
+    else:
+        # Return success response if all records are processed without errors
         return {'message': 'Data inserted successfully'}
-
-    except ValidationError as e:
-        return {'error': 'Data validation failed', 'details': str(e)}
-    except Exception as e:
-        return {'error': 'Failed to insert data', 'details': str(e)}
 
