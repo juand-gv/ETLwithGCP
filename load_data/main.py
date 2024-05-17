@@ -63,37 +63,39 @@ def csv_to_bigquery(request, context=None):
 
     Usage example:
     {
-        "request": {
-            "name": "file_name.csv",
+        "event": {
+            "file_name": "file_name.csv",
             "table_id": "table_name"
         }
     } 
     """
 
     client = bigquery.Client()
-    gcs_client = storage.Client()
+    # gcs_client = storage.Client()
 
     # Retrieve configurations from Google Cloud Secret Manager
     file_path = get_secret("source-file-path")
     dataset_id = get_secret("mig-dataset-id")
     project_id = __project_id__
 
-    table_id = request.args.get("table_id")
+    payload = request.get_json()
+
+    event = payload["event"]
+    file_name = event["file_name"]
+    table_id = event["table_id"]
+
+
 
     # Determine the table based on the file name in the event
-    source_blob_name = request.args.get("name")
-    uri = f"{file_path}{source_blob_name}"
+    uri = f"{file_path}{file_name}"
 
 
     # Select schema based on the source file name
-    if "hired_employees" in source_blob_name:
-        table_id = "hired_employees"
+    if "hired_employees" in file_name:
         schema = __schemas__["hired_employees"]
-    elif "departments" in source_blob_name:
-        table_id = "departments"
+    elif "departments" in file_name:
         schema = __schemas__["departments"]
-    elif "jobs" in source_blob_name:
-        table_id = "jobs"
+    elif "jobs" in file_name:
         schema = __schemas__["jobs"]
     else:
         raise ValueError("Unknown file type")
@@ -108,6 +110,7 @@ def csv_to_bigquery(request, context=None):
     job_config.write_disposition = "WRITE_TRUNCATE"
     job_config.skip_leading_rows = 0
     job_config.autodetect = False
+    job_config.schema = schema
 
     load_job = client.load_table_from_uri(uri, table_ref, job_config=job_config)
 
