@@ -15,12 +15,12 @@ __project_id__ = os.getenv("GCP_PROJECT_ID")
 class Department(BaseModel):
     """Data model for department entities."""
     id: int
-    department_name: str
+    department: str
 
 class Job(BaseModel):
     """Data model for job entities."""
     id: int
-    job_name: str
+    job: str
 
 class Employee(BaseModel):
     """Data model for employee entities, including validation for datetime format."""
