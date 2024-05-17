@@ -1,4 +1,4 @@
-name: Deploy Cloud Function
+name: Deploy Cloud Functions
 
 on:
   push:
@@ -6,27 +6,53 @@ on:
       - master
 
 jobs:
-  deploy:
+  deploy-csv-to-bigquery:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    - id: 'auth'
-      uses: 'google-github-actions/auth@v2'
-      with:
-        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
-    - name: 'Set up Cloud SDK'
-      uses: 'google-github-actions/setup-gcloud@v2'
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
-    - name: Deploy Cloud Function
-      run: |
-        gcloud functions deploy gc_csv_2_bq \
-          --entry-point csv_to_bigquery \
-          --runtime python39 \
-          --trigger-http \
-          --allow-unauthenticated \
-          --region us-central1 \
-          --source ./load_data \
-          --set-env-vars=GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+      - name: Deploy CSV to BigQuery Cloud Function
+        run: |
+          gcloud functions deploy gc_csv_2_bq \
+            --entry-point csv_to_bigquery \
+            --runtime python39 \
+            --trigger-http \
+            --allow-unauthenticated \
+            --region us-central1 \
+            --source ./load_data \
+            --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+
+  deploy-append-data:
+    needs: deploy-csv-to-bigquery
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Append Data Cloud Function
+        run: |
+          gcloud functions deploy append_data \
+            --entry-point insert_data \
+            --runtime python39 \
+            --trigger-http \
+            --allow-unauthenticated \
+            --region us-central1 \
+            --source ./api \
+            --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
