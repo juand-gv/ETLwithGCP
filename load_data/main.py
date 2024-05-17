@@ -44,6 +44,7 @@ def get_secret(secret_id):
 
     Returns:
         str: The secret value.
+    
     """
 
     client = secretmanager.SecretManagerServiceClient()
@@ -52,13 +53,21 @@ def get_secret(secret_id):
     return response.payload.data.decode("UTF-8")
 
 
-def csv_to_bigquery(event, context=None):
+def csv_to_bigquery(request, context=None):
     """
     Cloud Function to load CSV files from Google Cloud Storage into BigQuery.
 
     Args:
-        event (dict): The event payload.
+        request ( Flask request object,): The event payload.
         context (google.cloud.functions.Context): Metadata for the event.
+
+    Usage example:
+    {
+        "request": {
+            "name": "file_name.csv",
+            "table_id": "table_name"
+        }
+    } 
     """
 
     client = bigquery.Client()
@@ -69,10 +78,10 @@ def csv_to_bigquery(event, context=None):
     dataset_id = get_secret("mig-dataset-id")
     project_id = __project_id__
 
-    table_id = event["table_id"]
+    table_id = request.args.get("table_id")
 
     # Determine the table based on the file name in the event
-    source_blob_name = event["name"]
+    source_blob_name = request.args.get("name")
     uri = f"{file_path}{source_blob_name}"
 
 
