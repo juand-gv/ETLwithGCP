@@ -1,9 +1,9 @@
 from google.cloud import bigquery
 from google.cloud import secretmanager
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, Field, field_validator
 from typing import List, Dict, Any
-from flask import escape, jsonify, Flask, request
 
+from datetime import datetime
 import os
 import logging
 
@@ -11,9 +11,6 @@ import logging
 # Retrieve the Google Cloud project ID from environment variables
 __project_id__ = os.getenv("GCP_PROJECT_ID")
 
-
-
-app = Flask(__name__)
 
 class Department(BaseModel):
     """Data model for department entities."""
@@ -32,6 +29,28 @@ class Employee(BaseModel):
     datetime: str
     department_id: int
     job_id: int
+
+    @field_validator('datetime')
+    def datetime_format(cls, v):
+        """
+        Validates datetime in ISO 8601 format.
+
+        Parameters:
+            v (str): The datetime string to validate.
+
+        Returns:
+            str: The validated datetime string.
+
+        Raises:
+            ValueError: If the datetime is not in ISO 8601 format.
+        """
+        try:
+            # Intenta parsear la fecha en formato ISO 8601
+            # datetime.fromisoformat asume 'Z' como '+00:00' cuando se usa
+            datetime.fromisoformat(v.replace('Z', '+00:00'))
+        except ValueError:
+            raise ValueError("datetime must be in ISO 8601 format")
+        return v
 
 
 def get_secret(secret_id):
@@ -74,8 +93,7 @@ def process_records(data: List[Dict], model: BaseModel, dataset_id: str, table_n
     if errors:
         raise RuntimeError(f"Failed to insert records into {table_id}: {errors}")
 
-@app.route('/', methods=['POST'])
-def insert_data():
+def insert_data(request):
     """
     Endpoint to receive and insert data into BigQuery.
 
@@ -91,8 +109,9 @@ def insert_data():
     """
     request_data = request.get_json()
 
+
     if not request_data:
-        return jsonify({'error': 'Invalid or missing JSON'}), 400
+        return {'error': 'Invalid or missing JSON'}
 
     dataset_id = get_secret("mig-dataset-id")
 
@@ -106,10 +125,10 @@ def insert_data():
         if 'employees' in request_data:
             process_records(request_data['employees'], Employee, dataset_id, 'employees')
 
-        return jsonify({'message': 'Data inserted successfully'}), 200
+        return {'message': 'Data inserted successfully'}
 
     except ValidationError as e:
-        return jsonify({'error': 'Data validation failed', 'details': str(e)}), 400
+        return {'error': 'Data validation failed', 'details': str(e)}
     except Exception as e:
-        return jsonify({'error': 'Failed to insert data', 'details': str(e)}), 500
+        return {'error': 'Failed to insert data', 'details': str(e)}
 
