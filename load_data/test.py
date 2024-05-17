@@ -17,7 +17,7 @@ context = {}
 
 
 # Importa la función desde tu script
-from loader import csv_to_bigquery
+from ETLwithGCP.load_data.main import csv_to_bigquery
 
 # Llama a la función con los datos del evento simulados
 csv_to_bigquery(event, context)
