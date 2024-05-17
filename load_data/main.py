@@ -3,6 +3,13 @@ from google.cloud import storage
 from google.cloud import secretmanager
 
 import os
+import logging
+
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger()
+
 
 # Retrieve the Google Cloud project ID from environment variables
 __project_id__ = os.getenv("GCP_PROJECT_ID")
@@ -45,7 +52,7 @@ def get_secret(secret_id):
     return response.payload.data.decode("UTF-8")
 
 
-def csv_to_bigquery(event, context):
+def csv_to_bigquery(event, context=None):
     """
     Cloud Function to load CSV files from Google Cloud Storage into BigQuery.
 
@@ -99,4 +106,6 @@ def csv_to_bigquery(event, context):
     # Wait for the job to complete
     load_job.result() 
 
-    print(f"Job finished. Loaded {load_job.output_rows} rows.")
+    logger.info(f"Job finished. Loaded {load_job.output_rows} rows.")
+
+    return True
