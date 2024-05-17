@@ -109,15 +109,50 @@ def insert_data(request):
     """
     Endpoint to receive and insert data into BigQuery.
 
-    Expects a JSON payload with keys corresponding to tables: 'departments', 'jobs', 'employees'.
+    Expects a JSON payload with keys corresponding to tables: 'departments', 'jobs', 'hired_employees'.
 
     Returns:
         JSON response indicating the status of the operations.
 
-    Status Codes:
-        200: Success
-        400: Bad request due to invalid JSON or data validation failure.
-        500: Internal server error from BigQuery operations or other exceptions.
+    Usage Example:    
+    {
+        "departments": [
+            {
+                "id": 666,
+                "department": 6
+            },
+            {
+                "id": 888,
+                "department": "Gaming"
+            }
+        ],
+        "jobs": [
+            {
+                "id": 666,
+                "job": "Game Developer"
+            },
+            {
+                "id": 222,
+                "job": "Analyst"
+            }
+        ],
+        "hired_employees": [
+            {
+                "id": 10101,
+                "name": "John Doe",
+                "datetime": "2021-11-07T02:48:42Z",
+                "department_id": 1,
+                "job_id": 1
+            },
+            {
+                "id": 20202,
+                "name": "Jane Doe",
+                "datetime": "2021-12-07T02:48:42Z",
+                "department_id": 2,
+                "job_id": 2
+            }
+        ]
+    }
     """
     request_data = request.get_json()
 
