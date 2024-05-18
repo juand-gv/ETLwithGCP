@@ -78,8 +78,7 @@ jobs:
 
       - name: Deploy API configuration to API Gateway
         run: |
-          gcloud api-gateway apis create api-data-migration --api-id=data-migration-api \
-            --openapi-spec=openapi2-functions.yaml \
+          gcloud api-gateway apis create data-migration-api \
             --project=${{ secrets.GCP_PROJECT_ID }}
           gcloud api-gateway api-configs create data-migration-config \
             --api=data-migration-api \
