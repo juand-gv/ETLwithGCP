@@ -166,21 +166,31 @@ def insert_data(request):
         return jsonify({'error': 'Invalid or missing JSON'}), 400
 
     dataset_id = get_secret("mig-dataset-id")
-    total_errors  = []
+    results = {
+        'successful_records': [],
+        'errors': []
+    }
 
 
 
     for entity, model in [('departments', Department), ('jobs', Job), ('employees', Employee)]:
         if entity in request_data:
-            errors = process_records(request_data[entity], model, dataset_id, entity)
+            data = request_data[entity]
+            errors = process_records(data, model, dataset_id, entity)
             if errors:
-                total_errors.extend(errors)
+                results['errors'].extend(errors)
+            else:
+                results['successful_records'].extend(data)  # Assumes all went well if no errors
 
-
-    if total_errors:
-        # Return error response if there are any validation or insertion errors
-         return jsonify({'error': 'Some records failed validation or insertion', 'details': total_errors}), 400
+    if results['errors']:
+        # If there are any errors, return a mixed response
+        response_status = 207 if results['successful_records'] else 400
+        return jsonify({
+            'message': 'Partial success' if results['successful_records'] else 'Failed to insert any records',
+            'successful_records': results['successful_records'],
+            'errors': results['errors']
+        }), response_status
     else:
         # Return success response if all records are processed without errors
-        return jsonify({'message': 'Data inserted successfully'}), 200
+        return jsonify({'message': 'Data inserted successfully', 'records_processed': len(results['successful_records'])}), 200
 

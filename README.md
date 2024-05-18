@@ -35,3 +35,11 @@ OPTIONS(labels=[('process', 'migration')]);
 ``` 
 
 
+
+
+## References
+
+* https://beranger.medium.com/rate-limit-google-cloud-functions-with-api-gateway-19b54bb9d9e9
+
+
+
