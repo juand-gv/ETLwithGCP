@@ -39,3 +39,4 @@ securityDefinitions:
     flow: accessCode
     scopes:
       'https://www.googleapis.com/auth/userinfo.email': 'View your email address'
+    jwksUri: "https://www.googleapis.com/oauth2/v3/certs"
