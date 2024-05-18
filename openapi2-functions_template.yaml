@@ -33,10 +33,9 @@ paths:
             - 'https://www.googleapis.com/auth/userinfo.email'
 securityDefinitions:
   oauth2:
-    type: "oauth2"
+    type: oauth2
     authorizationUrl: "https://accounts.google.com/o/oauth2/auth"
     tokenUrl: "https://oauth2.googleapis.com/token"
-    flow: "implicit"
-    jwksUri: "https://www.googleapis.com/oauth2/v3/certs"
+    flow: accessCode
     scopes:
       'https://www.googleapis.com/auth/userinfo.email': 'View your email address'
