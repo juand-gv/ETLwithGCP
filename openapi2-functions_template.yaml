@@ -34,9 +34,11 @@ paths:
 securityDefinitions:
   oauth2:
     type: oauth2
-    authorizationUrl: "https://accounts.google.com/o/oauth2/auth"
+    authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth"
     tokenUrl: "https://oauth2.googleapis.com/token"
     flow: accessCode
     scopes:
       'https://www.googleapis.com/auth/userinfo.email': 'View your email address'
-    jwksUri: "https://www.googleapis.com/oauth2/v3/certs"
+    x-google-issuer: "https://accounts.google.com"
+    x-google-jwks_uri: "https://www.googleapis.com/oauth2/v3/certs"
+    x-google-audiences: "492131365367-ggaqsqugn7t0cl0k6ai88inbgesefqcs.apps.googleusercontent.com"
