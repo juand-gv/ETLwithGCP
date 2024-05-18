@@ -1,4 +1,4 @@
-name: Deploy Cloud Functions
+name: Deploy project
 
 on:
   push:
@@ -76,17 +76,34 @@ jobs:
         run: |
           sed "s/{{ PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}/g" openapi2-functions_template.yaml > openapi2-functions.yaml
 
-      - name: Deploy API configuration to API Gateway
+      - name: Check if API exists
+        id: api_exists
         run: |
-          gcloud api-gateway apis create data-migration-api \
-            --project=${{ secrets.GCP_PROJECT_ID }}
-          gcloud api-gateway api-configs create data-migration-config \
-            --api=data-migration-api \
-            --openapi-spec=openapi2-functions.yaml \
-            --project=${{ secrets.GCP_PROJECT_ID }} \
-            --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
-          gcloud api-gateway gateways create data-migration-gateway \
-            --api=data-migration-api \
-            --api-config=data-migration-config \
-            --location=us-central1 \
-            --project=${{ secrets.GCP_PROJECT_ID }}
+          if gcloud api-gateway apis describe data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}; then
+            echo "API exists."
+            echo "api_exists=true" >> $GITHUB_ENV
+          else
+            echo "API does not exist."
+            echo "api_exists=false" >> $GITHUB_ENV
+          fi
+
+    - name: Create API if not exists
+      if: env.api_exists == 'false'
+      run: |
+        gcloud api-gateway apis create data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}
+
+    - name: Create API Config
+      run: |
+        gcloud api-gateway api-configs create data-migration-config-${{ github.run_number }} \
+          --api=data-migration-api \
+          --openapi-spec=openapi2-functions.yaml \
+          --project=${{ secrets.GCP_PROJECT_ID }} \
+          --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+    - name: Deploy API Gateway
+      run: |
+        gcloud api-gateway gateways create data-migration-gateway \
+          --api=data-migration-api \
+          --api-config=data-migration-config-${{ github.run_number }} \
+          --location=us-central1 \
+          --project=${{ secrets.GCP_PROJECT_ID }}
