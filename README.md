@@ -14,8 +14,8 @@ Dashboard
 https://lookerstudio.google.com/reporting/ea42b099-497d-428a-9fbf-7c7d4ec76e3c
 
 
-![Dashboard1](docs/dsh1.png)
-![Dashboard2](docs/dsh2.png)
+![Dashboard1](docs/images/dsh1.png)
+![Dashboard2](docs/images/dsh2.png)
 
 
 ## References
