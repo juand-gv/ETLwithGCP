@@ -2,7 +2,7 @@
 
 # Overview
 
-![asdasd](docs/GlobantCh1.svg)
+![ProjectArch](docs/GlobantCh1.svg)
 
 
 
