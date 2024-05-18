@@ -84,10 +84,10 @@ def csv_to_bigquery(request, context=None):
     file_name = event["file_name"]
     table_id = event["table_id"]
 
-
-
     # Determine the table based on the file name in the event
     uri = f"{file_path}{file_name}"
+
+    logger.info(f"Starting load job for {file_name} into {table_id}")
 
 
     # Select schema based on the source file name
@@ -98,6 +98,7 @@ def csv_to_bigquery(request, context=None):
     elif "jobs" in file_name:
         schema = __schemas__["jobs"]
     else:
+        logger.error(f"Unknown file type for {file_name}")
         raise ValueError("Unknown file type")
 
     dataset_ref = client.dataset(dataset_id, project=project_id)
@@ -112,12 +113,15 @@ def csv_to_bigquery(request, context=None):
     job_config.autodetect = False
     job_config.schema = schema
 
-    load_job = client.load_table_from_uri(uri, table_ref, job_config=job_config)
 
-        
-    # Wait for the job to complete
-    load_job.result() 
 
-    response = f"Job finished. Loaded {load_job.output_rows} rows into table: {table_id}. In truncate mode."
+    try:
+        load_job = client.load_table_from_uri(uri, table_ref, job_config=job_config)
+        load_job.result()
+        logger.info(f"Job finished. Loaded {load_job.output_rows} rows into {table_id}.")
 
-    return response
+        return f"Job finished. Loaded {load_job.output_rows} rows into table: {table_id}. In truncate mode."
+
+    except Exception as e:
+        logger.error(f"Failed to load data into {table_id}: {str(e)}")
+        raise Exception("Failed to load data into {table_id}: {str(e)}")
