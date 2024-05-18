@@ -1,11 +1,33 @@
 swagger: '2.0'
 info:
-  title: Data Operations API
+  title: data-migration-api
   description: API to manage data operations through Cloud Functions
   version: '1.0.0'
 host: 'us-central1.cloudfunctions.net'
 schemes:
   - https
+x-google-management:
+  metrics:
+    - name: "load-csv-request"
+      displayName: "Load CSV quota"
+      valueType: INT64
+      metricKind: DELTA
+    - name: "insert-record-request"
+      displayName: "Insert new record quota"
+      valueType: INT64
+      metricKind: DELTA
+  quota:
+    limits:
+      - name: "load-csv-limit"
+        metric: "load-csv-request"
+        unit: "1/min/{project}"
+        values:
+          STANDARD: 2
+      - name: "insert-record-limit"
+        metric: "insert-record-request"
+        unit: "1/min/{project}"
+        values:
+          STANDARD: 2
 paths:
   /load_csv:
     post:
@@ -15,10 +37,12 @@ paths:
         address: https://us-central1-{{ PROJECT_ID }}.cloudfunctions.net/gc_csv_2_bq
       responses:
         '200':
-          description: Data loaded successfully
+          description: Data loaded successfully from CSV
       security:
-        - oauth2:
-            - 'https://www.googleapis.com/auth/userinfo.email'
+        - api_key: []
+      x-google-quota:
+        metricCosts:
+          "load-csv-request": 1
   /insert_data:
     post:
       operationId: insertData
@@ -29,10 +53,10 @@ paths:
         '200':
           description: Data inserted successfully
       security:
-        - oauth2:
-            - 'https://www.googleapis.com/auth/userinfo.email'
-security:
-  - api_key: []
+        - api_key: []
+      x-google-quota:
+        metricCosts:
+          "insert-record-request": 1
 securityDefinitions:
   api_key:
     type: "apiKey"
