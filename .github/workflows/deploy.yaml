@@ -63,31 +63,47 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
         with:
           credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
-
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
-
       - name: Prepare OpenAPI configuration file
         run: |
           sed "s/{{ PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}/g" openapi2-functions_template.yaml > openapi2-functions.yaml
-
-      - name: Ensure API is created
+      - name: Deploy or Update API and Config
         run: |
-          gcloud api-gateway apis describe data-migration-api --project=${{ secrets.GCP_PROJECT_ID }} ||
-          gcloud api-gateway apis create data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}
-
-      - name: Deploy or update API Config
+          if gcloud api-gateway apis describe data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}; then
+            echo "API already exists, updating config..."
+            gcloud api-gateway api-configs delete data-migration-config --api=data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}
+            gcloud api-gateway api-configs create data-migration-config \
+              --api=data-migration-api \
+              --openapi-spec=openapi2-functions.yaml \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          else
+            echo "Creating API and Config..."
+            gcloud api-gateway apis create data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}
+            gcloud api-gateway api-configs create data-migration-config \
+              --api=data-migration-api \
+              --openapi-spec=openapi2-functions.yaml \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          fi
+      - name: Deploy or Update Gateway
         run: |
-          gcloud api-gateway api-configs describe data-migration-config --api=data-migration-api --project=${{ secrets.GCP_PROJECT_ID }} &&
-          gcloud api-gateway api-configs update data-migration-config --api=data-migration-api --openapi-spec=openapi2-functions.yaml --project=${{ secrets.GCP_PROJECT_ID }} --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }} ||
-          gcloud api-gateway api-configs create data-migration-config --api=data-migration-api --openapi-spec=openapi2-functions.yaml --project=${{ secrets.GCP_PROJECT_ID }} --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
-
-      - name: Ensure Gateway is created
-        run: |
-          gcloud api-gateway gateways describe data-migration-gateway --location=us-central1 --project=${{ secrets.GCP_PROJECT_ID }} ||
-          gcloud api-gateway gateways create data-migration-gateway --api=data-migration-api --api-config=data-migration-config --location=us-central1 --project=${{ secrets.GCP_PROJECT_ID }}
+          if gcloud api-gateway gateways describe data-migration-gateway --location=us-central1 --project=${{ secrets.GCP_PROJECT_ID }}; then
+            echo "Gateway already exists, updating..."
+            gcloud api-gateway gateways update data-migration-gateway \
+              --api=data-migration-api \
+              --api-config=data-migration-config \
+              --location=us-central1 \
+              --project=${{ secrets.GCP_PROJECT_ID }}
+          else
+            echo "Creating Gateway..."
+            gcloud api-gateway gateways create data-migration-gateway \
+              --api=data-migration-api \
+              --api-config=data-migration-config \
+              --location=us-central1 \
+              --project=${{ secrets.GCP_PROJECT_ID }}
