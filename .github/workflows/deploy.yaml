@@ -76,46 +76,18 @@ jobs:
         run: |
           sed "s/{{ PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}/g" openapi2-functions_template.yaml > openapi2-functions.yaml
 
-      - name: Check if API exists
-        id: check_api
+      - name: Ensure API is created
         run: |
-          if gcloud api-gateway apis describe data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}; then
-            echo "API already exists."
-            echo "::set-output name=exists::true"
-          else
-            echo "API does not exist."
-            echo "::set-output name=exists::false"
-          fi
-
-      - name: Create API if not exists
-        if: steps.check_api.outputs.exists == 'false'
-        run: |
+          gcloud api-gateway apis describe data-migration-api --project=${{ secrets.GCP_PROJECT_ID }} ||
           gcloud api-gateway apis create data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Create API Config
+      - name: Deploy or update API Config
         run: |
-          gcloud api-gateway api-configs create data-migration-config \
-            --api=data-migration-api \
-            --openapi-spec=openapi2-functions.yaml \
-            --project=${{ secrets.GCP_PROJECT_ID }} \
-            --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          gcloud api-gateway api-configs describe data-migration-config --api=data-migration-api --project=${{ secrets.GCP_PROJECT_ID }} &&
+          gcloud api-gateway api-configs update data-migration-config --api=data-migration-api --openapi-spec=openapi2-functions.yaml --project=${{ secrets.GCP_PROJECT_ID }} --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }} ||
+          gcloud api-gateway api-configs create data-migration-config --api=data-migration-api --openapi-spec=openapi2-functions.yaml --project=${{ secrets.GCP_PROJECT_ID }} --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
 
-      - name: Check if Gateway exists
-        id: check_gateway
+      - name: Ensure Gateway is created
         run: |
-          if gcloud api-gateway gateways describe data-migration-gateway --location=us-central1 --project=${{ secrets.GCP_PROJECT_ID }}; then
-            echo "Gateway already exists."
-            echo "::set-output name=exists::true"
-          else
-            echo "Gateway does not exist."
-            echo "::set-output name=exists::false"
-          fi
-
-      - name: Create Gateway if not exists
-        if: steps.check_gateway.outputs.exists == 'false'
-        run: |
-          gcloud api-gateway gateways create data-migration-gateway \
-            --api=data-migration-api \
-            --api-config=data-migration-config \
-            --location=us-central1 \
-            --project=${{ secrets.GCP_PROJECT_ID }}
+          gcloud api-gateway gateways describe data-migration-gateway --location=us-central1 --project=${{ secrets.GCP_PROJECT_ID }} ||
+          gcloud api-gateway gateways create data-migration-gateway --api=data-migration-api --api-config=data-migration-config --location=us-central1 --project=${{ secrets.GCP_PROJECT_ID }}
