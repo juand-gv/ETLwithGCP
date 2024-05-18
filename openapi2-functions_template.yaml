@@ -16,6 +16,9 @@ paths:
       responses:
         '200':
           description: Data loaded successfully
+      security:
+        - oauth2:
+            - 'https://www.googleapis.com/auth/userinfo.email'
   /insert_data:
     post:
       operationId: insertData
@@ -25,10 +28,13 @@ paths:
       responses:
         '200':
           description: Data inserted successfully
-security:
-  - api_key: []
+      security:
+        - oauth2:
+            - 'https://www.googleapis.com/auth/userinfo.email'
 securityDefinitions:
-  api_key:
-    type: "apiKey"
-    name: "key"
-    in: "query"
+  oauth2:
+    type: "oauth2"
+    authorizationUrl: "https://accounts.google.com/o/oauth2/auth"
+    flow: "implicit"
+    scopes:
+      'https://www.googleapis.com/auth/userinfo.email': 'View your email address'
