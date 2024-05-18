@@ -7,34 +7,15 @@
 
 
 
+## Challenge 2
 
-## Creating the BigQuery tables
-```SQL
-CREATE TABLE IF NOT EXISTS ODS_ORG_MIGRATION.hired_employees (
-  id              INT64,
-  name            STRING,
-  datetime        STRING,
-  department_id   INT64,
-  job_id          INT64
-)
-OPTIONS(labels=[('process', 'migration')]);
+Dashboard
+
+https://lookerstudio.google.com/reporting/ea42b099-497d-428a-9fbf-7c7d4ec76e3c
 
 
-CREATE TABLE IF NOT EXISTS ODS_ORG_MIGRATION.departments (
-  id              INT64,
-  department      STRING
-)
-OPTIONS(labels=[('process', 'migration')]);
-
-
-CREATE TABLE IF NOT EXISTS ODS_ORG_MIGRATION.jobs (
-  id              INT64,
-  job            STRING
-)
-OPTIONS(labels=[('process', 'migration')]);
-``` 
-
-
+![Dashboard1](docs/dsh1.png)
+![Dashboard2](docs/dsh2.png)
 
 
 ## References
