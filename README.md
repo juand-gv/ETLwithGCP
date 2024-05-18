@@ -2,7 +2,7 @@
 
 # Overview
 
-![ProjectArch](docs/GlobantCh1.svg)
+![ProjectArch](docs/images/GlobantCh1.svg)
 
 
 
