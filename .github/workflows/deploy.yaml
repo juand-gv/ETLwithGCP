@@ -56,3 +56,38 @@ jobs:
             --region us-central1 \
             --source ./api \
             --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
+  
+  deploy-api-gateway:
+    needs: deploy-append-data
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Prepare OpenAPI configuration file
+        run: |
+          sed "s/{{ PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}/g" openapi2-functions_template.yaml > openapi2-functions.yaml
+
+      - name: Deploy API configuration to API Gateway
+        run: |
+          gcloud api-gateway apis create api-data-migration --api-id=data-migration-api \
+            --openapi-spec=openapi2-functions.yaml \
+            --project=${{ secrets.GCP_PROJECT_ID }}
+          gcloud api-gateway api-configs create data-migration-config \
+            --api=data-migration-api \
+            --openapi-spec=openapi2-functions.yaml \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          gcloud api-gateway gateways create data-migration-gateway \
+            --api=data-migration-api \
+            --api-config=data-migration-config \
+            --location=us-central1 \
+            --project=${{ secrets.GCP_PROJECT_ID }}

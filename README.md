@@ -7,25 +7,6 @@
 
 
 
-## Pre-requisites
-
-This project runs in Docker + Docker Compose
-
-
-## Installation
-
-Use the docker-compose cli to install the image and run the container.
-
-First Installation:
-```bash
-docker compose up --build
-```
-
-With the container already created:
-```bash
-docker compose up
-```
-
 
 ## Creating the BigQuery tables
 ```SQL

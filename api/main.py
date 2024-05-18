@@ -2,11 +2,14 @@ from google.cloud import bigquery
 from google.cloud import secretmanager
 from pydantic import BaseModel, ValidationError, Field, field_validator
 from typing import List, Dict, Any
+from flask import Flask, request, jsonify
 
 from datetime import datetime
 import os
 import logging
 
+
+app = Flask(__name__)
 
 # Retrieve the Google Cloud project ID from environment variables
 __project_id__ = os.getenv("GCP_PROJECT_ID")
@@ -49,6 +52,7 @@ class Employee(BaseModel):
             # datetime.fromisoformat asume 'Z' como '+00:00' cuando se usa
             datetime.fromisoformat(v.replace('Z', '+00:00'))
         except ValueError:
+            logging.error("datetime must be in ISO 8601 format")
             raise ValueError("datetime must be in ISO 8601 format")
         return v
 
@@ -105,6 +109,7 @@ def process_records(data: List[Dict], model: BaseModel, dataset_id: str, table_n
     # Retrning errors for further processing
     return errors
 
+@app.route('/', methods=['POST'])
 def insert_data(request):
     """
     Endpoint to receive and insert data into BigQuery.
@@ -158,7 +163,7 @@ def insert_data(request):
 
 
     if not request_data:
-        return {'error': 'Invalid or missing JSON'}
+        return jsonify({'error': 'Invalid or missing JSON'}), 400
 
     dataset_id = get_secret("mig-dataset-id")
     total_errors  = []
@@ -174,8 +179,8 @@ def insert_data(request):
 
     if total_errors:
         # Return error response if there are any validation or insertion errors
-        return {'error': 'Some records failed validation or insertion', 'details': total_errors}
+         return jsonify({'error': 'Some records failed validation or insertion', 'details': total_errors}), 400
     else:
         # Return success response if all records are processed without errors
-        return {'message': 'Data inserted successfully'}
+        return jsonify({'message': 'Data inserted successfully'}), 200
 
