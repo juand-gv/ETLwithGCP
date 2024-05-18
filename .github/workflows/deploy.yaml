@@ -77,33 +77,45 @@ jobs:
           sed "s/{{ PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}/g" openapi2-functions_template.yaml > openapi2-functions.yaml
 
       - name: Check if API exists
-        id: api_exists
+        id: check_api
         run: |
           if gcloud api-gateway apis describe data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}; then
-            echo "API exists."
-            echo "api_exists=true" >> $GITHUB_ENV
+            echo "API already exists."
+            echo "::set-output name=exists::true"
           else
             echo "API does not exist."
-            echo "api_exists=false" >> $GITHUB_ENV
+            echo "::set-output name=exists::false"
           fi
 
       - name: Create API if not exists
-        if: env.api_exists == 'false'
+        if: steps.check_api.outputs.exists == 'false'
         run: |
           gcloud api-gateway apis create data-migration-api --project=${{ secrets.GCP_PROJECT_ID }}
 
       - name: Create API Config
         run: |
-          gcloud api-gateway api-configs create data-migration-config-${{ github.run_number }} \
+          gcloud api-gateway api-configs create data-migration-config \
             --api=data-migration-api \
             --openapi-spec=openapi2-functions.yaml \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --backend-auth-service-account=${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
 
-      - name: Deploy API Gateway
+      - name: Check if Gateway exists
+        id: check_gateway
+        run: |
+          if gcloud api-gateway gateways describe data-migration-gateway --location=us-central1 --project=${{ secrets.GCP_PROJECT_ID }}; then
+            echo "Gateway already exists."
+            echo "::set-output name=exists::true"
+          else
+            echo "Gateway does not exist."
+            echo "::set-output name=exists::false"
+          fi
+
+      - name: Create Gateway if not exists
+        if: steps.check_gateway.outputs.exists == 'false'
         run: |
           gcloud api-gateway gateways create data-migration-gateway \
             --api=data-migration-api \
-            --api-config=data-migration-config-${{ github.run_number }} \
+            --api-config=data-migration-config \
             --location=us-central1 \
             --project=${{ secrets.GCP_PROJECT_ID }}
