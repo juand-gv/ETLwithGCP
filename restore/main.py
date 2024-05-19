@@ -48,22 +48,26 @@ def restore_table_from_avro(request):
     Automatically restores a BigQuery table from the latest AVRO file located in a GCS bucket.
     """
     client = bigquery.Client()
-    backups_path = get_secret("bq_backups_file_path")
+    backups_path = get_secret("bq_backups_file_path").replace('gs://', '')
     dataset_id = get_secret("mig-dataset-id")
     project_id = __project_id__
 
     payload = request.get_json()
     table_id = payload["table_id"]
+    
+    # Split to get bucket name and base path
+    parts = backups_path.split('/', 1)
+    bucket_name = parts[0]
+    base_path = parts[1] if len(parts) > 1 else ''
 
-    # Finding the latest backup file for the table
-    prefix = f"{backups_path}{table_id}/"
-    backup_file_name = find_latest_backup(__project_id__, prefix)
+    prefix = f"{base_path}{table_id}/"
+    backup_file_name = find_latest_backup(bucket_name, prefix)
 
     if not backup_file_name:
         logger.error(f"No backup found for {table_id}")
         return f"No backup found for {table_id}", 404
 
-    source_uri = f"{prefix}{backup_file_name}"
+    source_uri = f"gs://{bucket_name}/{backup_file_name}"
     dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
     table_ref = dataset_ref.table(table_id)
     job_config = bigquery.LoadJobConfig(source_format=bigquery.SourceFormat.AVRO)
