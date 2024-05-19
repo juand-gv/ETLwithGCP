@@ -1,8 +1,10 @@
 from google.cloud import bigquery
+from google.cloud import storage
 from google.cloud import secretmanager
 
 import os
 import logging
+from datetime import datetime
 
 
 # Set up logging
@@ -30,34 +32,61 @@ def get_secret(secret_id):
     response = client.access_secret_version(name=name)
     return response.payload.data.decode("UTF-8")
 
+def find_latest_backup(bucket_name, prefix):
+    """
+    Finds the latest backup file in the specified GCS bucket and prefix.
+    """
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blobs = bucket.list_blobs(prefix=prefix)
+    latest_blob = None
+    latest_date = datetime.min
 
-def import_table_from_avro(request, context):
+    for blob in blobs:
+        blob_date = blob.time_created
+        if blob_date > latest_date:
+            latest_blob = blob.name
+            latest_date = blob_date
+
+    return latest_blob if latest_blob else None
+
+def restore_table_from_avro(request):
+    """
+    Imports a BigQuery table from an AVRO file located in GCS.
+    """
+
     client = bigquery.Client()
-
-
-    # Retrieve configurations from Google Cloud Secret Manager
     backups_path = get_secret("bq_backups_file_path")
     dataset_id = get_secret("mig-dataset-id")
     project_id = __project_id__
 
     payload = request.get_json()
 
-    table_id = payload["table_id"]
-    backup_file_name = payload["backup_file_name"]
+    table_ids = payload["table_ids"]
+    backup_file_names = payload["backup_file_names"]
 
-    source_uri = f"{backups_path}{table_id}/{backup_file_name}"
+    responses = []
 
-    dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
-    table_ref = dataset_ref.table(table_id)
+    for index, table_id in enumerate(table_ids):
+        backup_file_name = backup_file_names[index] if index < len(backup_file_names) else None
+        if not backup_file_name:
+            # If no specific backup file is specified, find the latest one
+            backup_file_name = find_latest_backup(backups_path, f"{table_id}/")
+            if not backup_file_name:
+                responses.append(f"No backup found for {table_id}")
+                continue
 
-    job_config = bigquery.LoadJobConfig(source_format=bigquery.SourceFormat.AVRO)
-    load_job = client.load_table_from_uri(
-        source_uri, table_ref, job_config=job_config
-    )
-    
-    # Execute the job and wait for it to complete
-    load_job.result()
+        source_uri = f"gs://{backups_path}{table_id}/{backup_file_name}"
+        dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
+        table_ref = dataset_ref.table(table_id)
+        job_config = bigquery.LoadJobConfig(source_format=bigquery.SourceFormat.AVRO)
 
+        load_job = client.load_table_from_uri(
+            source_uri, table_ref, job_config=job_config
+        )
+        load_job.result()  # Wait for the job to complete
 
-    logger.info(f"Imported {table_id} from {source_uri}")
-    return f"Imported {table_id} from {source_uri}"
+        logger.info(f"Imported {table_id} from {source_uri}")
+        responses.append(f"Imported {table_id} from {source_uri}")
+
+    return {'Responses': responses}
