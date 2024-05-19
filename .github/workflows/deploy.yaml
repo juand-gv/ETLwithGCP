@@ -135,5 +135,5 @@ jobs:
             --trigger-http \
             --allow-unauthenticated \
             --region us-central1 \
-            --source ./backup_to_avro \
+            --source ./backup \
             --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
