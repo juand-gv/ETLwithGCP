@@ -139,37 +139,61 @@ jobs:
             --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
   
   deploy-workflow:
-    needs: deploy-backup-to-avro
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  needs: deploy-backup-to-avro
+  runs-on: ubuntu-latest
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Authenticate with Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+    - name: Authenticate with Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
 
-      - name: Prepare Workflow configuration file
-        run: |
-          sed "s/{{ PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}/g" ./workflow/backup_workflow_template.yaml > backup_workflow.yaml
+    - name: Prepare Workflow configuration file
+      run: |
+        sed "s/{{ PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}/g" ./workflow/backup_workflow_template.yaml > backup_workflow.yaml
 
-      - name: Deploy Workflow
-        run: |
-          gcloud workflows deploy data-backup-workflow \
-            --source=backup_workflow.yaml \
-            --location=us-central1
+    - name: Deploy Workflow
+      run: |
+        gcloud workflows deploy data-backup-workflow \
+          --source=backup_workflow.yaml \
+          --location=us-central1
 
-      - name: Schedule Workflow using Cloud Scheduler
-        run: |
-          gcloud scheduler jobs create http run-daily-backup \
-            --location=us-central1 \
-            --schedule="0 0 * * *" \
-            --uri="https://workflowexecutions.googleapis.com/v1/projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-central1/workflows/data-backup-workflow/executions" \
-            --oauth-service-account-email ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }} \
-            --http-method=POST \
-            --message-body='{}' \
-            --time-zone="America/Bogota"
+    - name: Check if Cloud Scheduler job exists
+      id: check_scheduler
+      run: |
+        if gcloud scheduler jobs describe run-daily-backup --location=us-central1 --project=${{ secrets.GCP_PROJECT_ID }}; then
+          echo "Scheduler job exists."
+          echo "::set-output name=exists::true"
+        else
+          echo "Scheduler job does not exist."
+          echo "::set-output name=exists::false"
+        fi
+
+    - name: Update Scheduler job if exists
+      if: steps.check_scheduler.outputs.exists == 'true'
+      run: |
+        gcloud scheduler jobs update http run-daily-backup \
+          --location=us-central1 \
+          --schedule="0 8 * * *" \
+          --uri="https://workflowexecutions.googleapis.com/v1/projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-central1/workflows/data-backup-workflow/executions" \
+          --oauth-service-account-email ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }} \
+          --http-method=POST \
+          --message-body='{}' \
+          --time-zone="America/Bogota"
+
+    - name: Create Scheduler job if not exists
+      if: steps.check_scheduler.outputs.exists == 'false'
+      run: |
+        gcloud scheduler jobs create http run-daily-backup \
+          --location=us-central1 \
+          --schedule="0 8 * * *" \
+          --uri="https://workflowexecutions.googleapis.com/v1/projects/${{ secrets.GCP_PROJECT_ID }}/locations/us-central1/workflows/data-backup-workflow/executions" \
+          --oauth-service-account-email ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }} \
+          --http-method=POST \
+          --message-body='{}' \
+          --time-zone="America/Bogota"
