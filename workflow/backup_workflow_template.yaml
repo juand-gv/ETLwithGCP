@@ -7,8 +7,6 @@
     call: http.post
     args:
       url: ${backupFunctionUrl}
-      auth:
-        type: OAuth2
       body:
         table_id: "departments"
     result: backupResult1
@@ -16,8 +14,6 @@
     call: http.post
     args:
       url: ${backupFunctionUrl}
-      auth:
-        type: OAuth2
       body:
         table_id: "hired_employees"
     result: backupResult2
@@ -25,8 +21,6 @@
     call: http.post
     args:
       url: ${backupFunctionUrl}
-      auth:
-        type: OAuth2
       body:
         table_id: "jobs"
     result: backupResult3
