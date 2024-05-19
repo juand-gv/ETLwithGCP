@@ -221,5 +221,5 @@ jobs:
             --trigger-http \
             --allow-unauthenticated \
             --region us-central1 \
-            --source ./backup \
+            --source ./restore \
             --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
