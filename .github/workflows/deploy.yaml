@@ -111,3 +111,29 @@ jobs:
   #           --api-config=data-migration-config \
   #           --location=us-central1 \
   #           --project=${{ secrets.GCP_PROJECT_ID }}
+
+  deploy-backup-to-avro:
+    needs: deploy-schema
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Backup to AVRO Cloud Function
+        run: |
+          gcloud functions deploy export_table_to_avro \
+            --entry-point export_table_to_avro \
+            --runtime python39 \
+            --trigger-http \
+            --allow-unauthenticated \
+            --region us-central1 \
+            --source ./backup_to_avro \
+            --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
