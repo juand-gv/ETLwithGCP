@@ -45,6 +45,12 @@ def export_table_to_avro(request, context=None):
 
     Returns:
         str: A message indicating the export operation's success and the URI of the exported files.
+
+
+    Usage example:
+    {
+        "table_id": "hired_employees"
+    }
     """
     
     client = bigquery.Client()

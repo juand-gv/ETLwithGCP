@@ -1,0 +1,34 @@
+- init:
+    assign:
+      - project: "{{ PROJECT_ID }}"
+      - location: "us-central1"
+      - backupFunctionUrl: "https://us-central1-{{ PROJECT_ID }}.cloudfunctions.net/export_table_to_avro"
+- backupTable1:
+    call: http.post
+    args:
+      url: ${backupFunctionUrl}
+      auth:
+        type: OAuth2
+      body:
+        table_id: "departments"
+    result: backupResult1
+- backupTable2:
+    call: http.post
+    args:
+      url: ${backupFunctionUrl}
+      auth:
+        type: OAuth2
+      body:
+        table_id: "hired_employees"
+    result: backupResult2
+- backupTable3:
+    call: http.post
+    args:
+      url: ${backupFunctionUrl}
+      auth:
+        type: OAuth2
+      body:
+        table_id: "jobs"
+    result: backupResult3
+- return:
+    return: "Backups completed for all tables"
