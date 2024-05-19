@@ -2,7 +2,7 @@
 
 # Overview
 
-![ProjectArch](docs/images/GlobantArch.svg)
+![ProjectArch](docs/images/GlobantChallenge.png)
 
 
 
