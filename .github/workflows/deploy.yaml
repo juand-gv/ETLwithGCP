@@ -155,7 +155,7 @@ jobs:
 
       - name: Prepare Workflow configuration file
         run: |
-          sed "s/{{ PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}/g" backup_workflow_template.yaml > backup_workflow.yaml
+          sed "s/{{ PROJECT_ID }}/${{ secrets.GCP_PROJECT_ID }}/g" ./workflow/backup_workflow_template.yaml > backup_workflow.yaml
 
       - name: Deploy Workflow
         run: |
