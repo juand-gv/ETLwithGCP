@@ -3,6 +3,7 @@ from google.cloud import secretmanager
 
 import os
 import logging
+from datetime import datetime
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -57,8 +58,11 @@ def export_table_to_avro(request, context=None):
     
     table_id = payload["table_id"]
 
+    # Format the current date in YYYYMMDD format
+    today = datetime.now().strftime("%Y%m%d")
 
-    destination_uri = f"{backups_path}{table_id}/*.avro"
+    # Include the date in the file name
+    destination_uri = f"{backups_path}{table_id}/{table_id}_{today}_*.avro"
 
     dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
     table_ref = dataset_ref.table(table_id)
