@@ -71,7 +71,7 @@ def restore_table_from_avro(request):
         logger.error(error_msg)
         return error_msg, 404
 
-    source_uri = f"{backups_path}{backup_file_name}"
+    source_uri = f"gs://{bucket_name}/{backup_file_name}"
     logger.info(f"Restoring from {source_uri}")
     dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
     table_ref = dataset_ref.table(table_id)
