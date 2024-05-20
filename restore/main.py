@@ -61,7 +61,7 @@ def restore_table_from_avro(request):
     # Assuming the backups_path does not include 'gs://' prefix here
     bucket_name = backups_path.split('/')[2]
     path = backups_path.split('/')[3]
-    prefix = f"{path}{table_id}/"
+    prefix = f"{path}/{table_id}/"
 
     logger.info(f"Looking for latest backup in {bucket_name}/{prefix}")
     backup_file_name = find_latest_backup(bucket_name, prefix)
