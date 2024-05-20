@@ -225,7 +225,7 @@ jobs:
             --set-env-vars GCP_PROJECT_ID=${{ secrets.GCP_PROJECT_ID }}
 
   deploy-restore-workflow:
-    needs: deploy-restore-from-avro
+    needs: deploy-restore-from-backup
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
