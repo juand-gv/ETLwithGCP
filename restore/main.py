@@ -34,11 +34,13 @@ def find_latest_backup(bucket_name, prefix):
     """
     storage_client = storage.Client()
     bucket = storage_client.bucket(bucket_name)
+    logger.info(f"Listing blobs in bucket {bucket_name} with prefix {prefix}")
     blobs = bucket.list_blobs(prefix=prefix)
     latest_blob = None
-    latest_date = datetime.min.replace(tzinfo=pytz.UTC)  # Asegúrate de que 'latest_date' es aware
+    latest_date = datetime.min.replace(tzinfo=pytz.UTC)
 
     for blob in blobs:
+        logger.info(f"Found blob: {blob.name} with date: {blob.time_created}")
         blob_date = blob.time_created
         if blob_date > latest_date:
             latest_blob = blob.name
@@ -47,36 +49,40 @@ def find_latest_backup(bucket_name, prefix):
     return latest_blob if latest_blob else None
 
 def restore_table_from_avro(request):
-    """
-    Imports a BigQuery table from the latest AVRO file located in a GCS bucket.
-    """
     client = bigquery.Client()
     backups_path = get_secret("bq_backups_file_path").strip('/')
     dataset_id = get_secret("mig-dataset-id")
     project_id = __project_id__
 
     payload = request.get_json()
+    
     table_id = payload["table_id"]
 
-    # Removing 'gs://' from backups_path to use only the bucket name and path
-    bucket_name, prefix = backups_path[5:].split('/', 1)
-    prefix = f"{prefix}{table_id}/"
+    # Assuming the backups_path does not include 'gs://' prefix here
+    bucket_name = backups_path.split('/')[2]
+    path = backups_path.split('/')[3]
+    prefix = f"{path}{table_id}/"
+
+    logger.info(f"Looking for latest backup in {bucket_name}/{prefix}")
     backup_file_name = find_latest_backup(bucket_name, prefix)
 
     if not backup_file_name:
-        logger.error(f"No backup found for {table_id}")
-        return f"No backup found for {table_id}", 404
+        error_msg = f"No backup found for {table_id}"
+        logger.error(error_msg)
+        return error_msg, 404
 
-    source_uri = f"gs://{bucket_name}/{prefix}{backup_file_name}"
+    source_uri = f"{backups_path}{backup_file_name}"
+    logger.info(f"Restoring from {source_uri}")
     dataset_ref = bigquery.DatasetReference(project_id, dataset_id)
     table_ref = dataset_ref.table(table_id)
     job_config = bigquery.LoadJobConfig(source_format=bigquery.SourceFormat.AVRO)
 
-    # Starting the job to restore the table
     load_job = client.load_table_from_uri(
         source_uri, table_ref, job_config=job_config
     )
     load_job.result()  # Wait for the job to complete
 
-    logger.info(f"Imported {table_id} from {source_uri}")
-    return f"Imported {table_id} from {source_uri}", 200
+    success_msg = f"Imported {table_id} from {source_uri}"
+    logger.info(success_msg)
+    return success_msg, 200
+
