@@ -17,4 +17,4 @@ main:
             table_id: ${table_id}
         result: restoreResult
     - return:
-        return: ${string.format("Table %s restored from backup file", [table_id])}
+        return: ${"Table " + table_id + " restored from backup file"}
