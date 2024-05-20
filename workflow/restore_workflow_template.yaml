@@ -2,10 +2,10 @@ main:
   params: [args]
   steps:
     - init:
-    assign:
-      - project: "{{ PROJECT_ID }}"
-      - location: "us-central1"
-      - restoreFunctionUrl: "https://us-central1-{{ PROJECT_ID }}.cloudfunctions.net/restore_table_from_avro"
+        assign:
+          - project: "{{ PROJECT_ID }}"
+          - location: "us-central1"
+          - restoreFunctionUrl: "https://us-central1-{{ PROJECT_ID }}.cloudfunctions.net/restore_table_from_avro"
     - restoreTable:
         call: http.post
         args:
